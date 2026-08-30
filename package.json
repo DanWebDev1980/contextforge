@@ -1,0 +1,18 @@
+{
+  "name": "contextforge",
+  "version": "0.1.0",
+  "description": "Browser-side capture tools that collect design, DOM, analytics and ticket context into one Copilot-ready prompt.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "hub": "node hub/server.mjs",
+    "serve": "node build.mjs && node hub/server.mjs",
+    "test": "node test/smoke.mjs && node test/browser.mjs",
+    "test:unit": "node test/smoke.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
