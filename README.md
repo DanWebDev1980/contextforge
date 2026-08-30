@@ -53,6 +53,7 @@ console**; DevTools is exempt from CSP.
 | `text-clip` | Select text anywhere, `Alt+C`, it lands in the basket with its URL. |
 | `ga4` | Live view of the GA4 events the page fires, with their parameters. |
 | `probe` | Dump a region's DOM structure so selectors can be written for it. |
+| `diagnose` | Report what the Figma / Octane adapters actually resolved, and why they failed. |
 
 ### A typical run
 
@@ -111,7 +112,9 @@ Known limits, stated plainly:
   are not read. Padding, gap, radius, typography, fills and strokes are.
 - `Auto` and percentage line-heights cannot be resolved to px from the panel.
 
-If it reads nothing, the panel probably moved. Run `probe` on it — see
+If it reads nothing, the panel probably moved. Run `diagnose` first — it prints
+every candidate container with its score and the reason each was rejected, plus
+the labels it did resolve. `probe` then gives the raw DOM if you need it. See
 [docs/calibration.md](docs/calibration.md).
 
 ### Figma discovery notes — `figma-stickies`
@@ -163,7 +166,9 @@ restores all three when you close the panel.
 - **Browser** (`test/browser.mjs`) — drives real Chromium over CDP against a
   fixture page: mounts the overlay, hovers, clicks, and reads the captured
   styles back out of `localStorage`. Covers `inspect-web`, `probe` and `ga4`
-  end to end.
+  end to end, plus a crash test that runs both the Figma and Octane reports
+  against arbitrary DOM to prove they degrade to "found nothing" rather than
+  throwing.
 
 **`inspect-figma`, `figma-stickies` and `octane-story` are not covered by tests**
 and have never been run against the real products — no fixture for them exists

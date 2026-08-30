@@ -229,6 +229,33 @@ try {
   `);
   check('patches reverted after close', () => assert.equal(restored, true));
 
+  // --- diagnose ----------------------------------------------------------
+  // Neither Figma nor Octane, so both reports run against arbitrary DOM. This
+  // is the crash test: the adapters must degrade to "found nothing", not throw.
+  console.log('\ndiagnose:');
+  await reload(cdp);
+  await evalJs(cdp, await readFile(resolve('dist/diagnose.js'), 'utf8'));
+  await sleep(200);
+  const report = await evalJs(cdp,
+    `document.getElementById('contextforge-root').shadowRoot.querySelector('pre').textContent`);
+
+  check('report renders', () => assert.ok(report.length > 200, `only ${report.length} chars`));
+  check('no adapter threw', () => assert.ok(!/THREW/.test(report), report.match(/THREW[\s\S]{0,300}/)?.[0]));
+  check('runs both reports when the site is unknown', () => {
+    assert.match(report, /FIGMA: properties panel detection/);
+    assert.match(report, /OCTANE: route parsing/);
+  });
+  check('figma panel detection degrades cleanly', () => {
+    assert.match(report, /No panel accepted|candidates with controls: 0/);
+  });
+  check('octane reports nothing found rather than inventing fields', () => {
+    assert.match(report, /found 0:|‹none›/);
+  });
+  check('host is stripped from the reported url', () => {
+    assert.match(report, /# url: http:\/\/‹host›/);
+    assert.ok(!report.includes('127.0.0.1:9334'), 'host leaked into report');
+  });
+
   cdp.close();
   console.log(`\n${pass} browser checks passed`);
 } finally {

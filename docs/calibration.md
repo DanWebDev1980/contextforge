@@ -4,7 +4,26 @@ Figma and Octane both ship obfuscated, build-specific class names, so no
 selector written without seeing your instance will hold for long. Rather than
 guess harder, the repo has a `probe` tool and two small, editable selector files.
 
-## The loop
+## Start with `diagnose`, not `probe`
+
+`probe` shows the DOM as it is. `diagnose` shows what the adapters *made* of it —
+which container won, why the others were rejected, which labels resolved, which
+properties mapped, and which labels are present but missing from the alias
+tables. That is usually the whole answer.
+
+```
+Figma:  select a layer, open the left panel (Alt+1), paste dist/diagnose.js
+Octane: open a story,                              paste dist/diagnose.js
+```
+
+Hit **Copy report**. The `redact text values` box keeps labels and value shapes
+but drops the text — it defaults on for Octane, because ticket content is more
+likely to be confidential than a hex code. Your hostname is stripped either way.
+
+Reach for `probe` when `diagnose` says a container was rejected and you need to
+see the surrounding structure to work out why.
+
+## The probe loop
 
 1. Open the page: a Figma file with a layer selected, or an Octane story.
 2. Paste `dist/probe.js` into the console.
