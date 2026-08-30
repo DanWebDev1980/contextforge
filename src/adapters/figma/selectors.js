@@ -54,27 +54,53 @@ export const ALIGN_HINTS = {
  * how many recognisable property inputs it holds; the winner is the panel.
  */
 export function findPropertiesPanel(doc = document) {
+  const ranked = rankPanelCandidates(doc).filter((c) => c.accepted);
+  return ranked.length ? ranked[0].node : null;
+}
+
+/**
+ * Every plausible container, scored, with the reason any was rejected.
+ * `findPropertiesPanel` takes the winner; the diagnose tool prints the lot,
+ * which is what turns "it found nothing" into an actionable bug report.
+ */
+export function rankPanelCandidates(doc = document) {
   const allLabels = new Set(Object.values(FIELD_ALIASES).flat());
   const candidates = [];
 
   for (const node of doc.querySelectorAll('div, aside, section')) {
     const r = node.getBoundingClientRect();
-    const hugsRight = Math.abs(r.right - window.innerWidth) < 12;
-    const plausible = r.width >= 180 && r.width <= 460 && r.height > window.innerHeight * 0.35;
-    if (!hugsRight || !plausible) continue;
+    const controls = node.querySelectorAll('input, [role="spinbutton"], [contenteditable="true"]');
+    if (!controls.length) continue;
 
+    const labels = [];
     let score = 0;
-    for (const input of node.querySelectorAll('input, [role="spinbutton"], [contenteditable="true"]')) {
+    for (const input of controls) {
       const label = labelOf(input);
+      if (label) labels.push(label);
       if (label && allLabels.has(label)) score += 1;
     }
-    if (score) candidates.push({ node, score, depth: depthOf(node) });
+
+    const reasons = [];
+    if (Math.abs(r.right - window.innerWidth) >= 12) reasons.push(`not flush right (right=${Math.round(r.right)}, vw=${window.innerWidth})`);
+    if (r.width < 180 || r.width > 460) reasons.push(`width ${Math.round(r.width)} outside 180-460`);
+    if (r.height <= window.innerHeight * 0.35) reasons.push(`height ${Math.round(r.height)} under 35% of ${window.innerHeight}`);
+    if (!score) reasons.push('no recognised field labels');
+
+    candidates.push({
+      node,
+      score,
+      depth: depthOf(node),
+      rect: { right: Math.round(r.right), width: Math.round(r.width), height: Math.round(r.height) },
+      controlCount: controls.length,
+      labels,
+      accepted: reasons.length === 0,
+      reasons,
+    });
   }
 
-  if (!candidates.length) return null;
   // Highest score wins; on a tie prefer the deepest (tightest) container.
-  candidates.sort((a, b) => b.score - a.score || b.depth - a.depth);
-  return candidates[0].node;
+  candidates.sort((a, b) => Number(b.accepted) - Number(a.accepted) || b.score - a.score || b.depth - a.depth);
+  return candidates;
 }
 
 function depthOf(node) {

@@ -16,9 +16,10 @@ const DESCRIPTIONS = {
   'compare': 'Diff a Figma capture against a web capture and list what does not match.',
   'basket': 'The context builder: assemble everything into one Copilot-ready prompt.',
   'probe': 'Dump a region\'s DOM structure so selectors can be written for it.',
+  'diagnose': 'Report what the Figma / Octane adapters actually resolved, and why they failed.',
 };
 
-const ORDER = ['basket', 'inspect-web', 'inspect-figma', 'compare', 'octane-story', 'figma-stickies', 'text-clip', 'ga4', 'probe'];
+const ORDER = ['basket', 'inspect-web', 'inspect-figma', 'compare', 'octane-story', 'figma-stickies', 'text-clip', 'ga4', 'probe', 'diagnose'];
 
 async function entries() {
   const files = (await readdir(SRC)).filter((f) => f.endsWith('.js'));
