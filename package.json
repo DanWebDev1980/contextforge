@@ -1,16 +1,21 @@
 {
-  "name": "contextforge",
-  "version": "0.1.0",
-  "description": "Browser-side capture tools that collect design, DOM, analytics and ticket context into one Copilot-ready prompt.",
+  "name": "browser-command-center",
+  "version": "1.0.0",
+  "description": "BrowserCommandCenter (BCC) — the web developer's power house of tools. One script, pasted once: AI context capture, state checkpoints, network recording and mocking, journey replay. No extension, no install.",
   "license": "MIT",
   "type": "module",
   "scripts": {
     "build": "node build.mjs",
+    "build:split": "node build.mjs --split",
     "watch": "node build.mjs --watch",
     "hub": "node hub/server.mjs",
     "serve": "node build.mjs && node hub/server.mjs",
-    "test": "node test/smoke.mjs && node test/browser.mjs",
-    "test:unit": "node test/smoke.mjs"
+    "copy": "node build.mjs && node scripts/copy.mjs",
+    "pack": "node build.mjs && node scripts/pack.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "test": "node build.mjs --split --quiet && node test/smoke.mjs && node test/browser.mjs",
+    "test:unit": "node test/smoke.mjs",
+    "test:browser": "node build.mjs --split --quiet && node test/browser.mjs"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

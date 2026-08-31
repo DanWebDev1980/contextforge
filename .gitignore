@@ -1,5 +1,8 @@
 node_modules/
 dist/
+.build-split/
 .DS_Store
 *.log
+.bcc-hub/
 .contextforge-hub/
+release/

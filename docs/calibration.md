@@ -12,9 +12,12 @@ properties mapped, and which labels are present but missing from the alias
 tables. That is usually the whole answer.
 
 ```
-Figma:  select a layer, open the left panel (Alt+1), paste dist/diagnose.js
-Octane: open a story,                              paste dist/diagnose.js
+Figma:  select a layer, open the left panel (Alt+1), run BCC → palette → Diagnose
+Octane: open a story,                              run BCC → palette → Diagnose
 ```
+
+Diagnose also prints a **CSP** section first: whether this page lets the hub be
+reached, whether a bookmarklet would run, and whether `eval` works.
 
 Hit **Copy report**. The `redact text values` box keeps labels and value shapes
 but drops the text — it defaults on for Octane, because ticket content is more
@@ -26,7 +29,7 @@ see the surrounding structure to work out why.
 ## The probe loop
 
 1. Open the page: a Figma file with a layer selected, or an Octane story.
-2. Paste `dist/probe.js` into the console.
+2. Run BCC (`Ctrl+P`, `!bcc`) and open **Probe** from the palette.
 3. Hover the region holding the data you want — Figma's right-hand properties
    panel, or the Octane story form. The highlight shows exactly what you have.
 4. Click it. An annotated outline appears.

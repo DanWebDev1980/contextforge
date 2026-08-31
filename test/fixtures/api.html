@@ -1,0 +1,21 @@
+<!doctype html><meta charset="utf-8"><title>api fixture</title>
+<h1>API page</h1>
+<pre id="out"></pre>
+<script>
+  window.callApi = async (path, init) => {
+    const res = await fetch(path, init);
+    const text = await res.text();
+    document.getElementById('out').textContent = `${res.status} ${text}`;
+    return { status: res.status, text };
+  };
+  window.callXhr = (method, path, body) => new Promise((resolve, reject) => {
+    const x = new XMLHttpRequest();
+    x.open(method, path);
+    x.setRequestHeader('x-test', '1');
+    x.onload = () => { document.getElementById('out').textContent = `${x.status} ${x.responseText}`; resolve({ status: x.status, text: x.responseText }); };
+    x.onerror = () => resolve({ status: 0, text: 'error' });
+    x.send(body ?? null);
+  });
+  // An early request before BCC is injected, so the pre-injection list has something.
+  fetch('/api/invoices?early=1').then((r) => r.text());
+</script>

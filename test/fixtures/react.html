@@ -1,0 +1,34 @@
+<!doctype html><meta charset="utf-8"><title>react-like fixture</title>
+<h1>Controlled input</h1>
+<div id="root"></div>
+<script>
+  // A React-style controlled input: the DOM value is forced back to state on
+  // every render; only an `input` event dispatched *after* the native setter
+  // updates state. Plain `el.value = 'x'` without an event is reverted.
+  const root = document.getElementById('root');
+  let state = { name: '', submitted: null };
+  const input = document.createElement('input');
+  input.id = 'name'; input.setAttribute('data-testid', 'name-input'); input.type = 'text';
+  const submit = document.createElement('button');
+  submit.textContent = 'Save'; submit.setAttribute('aria-label', 'Save name');
+  const status = document.createElement('div'); status.id = 'status';
+  root.append(input, submit, status);
+  function render() { input.value = state.name; status.textContent = state.submitted ? `saved:${state.submitted}` : ''; status.dataset.name = state.name; }
+  input.addEventListener('input', (e) => { state = { ...state, name: e.target.value }; render(); });
+  submit.addEventListener('click', () => { state = { ...state, submitted: state.name }; render(); });
+  render();
+
+  // Fake React fiber chain on the input so the component-tree tool has something to walk.
+  const key = '__reactFiber$test1';
+  const Field = function Field() {}; Field.displayName = 'Field';
+  const Form = function InvoiceForm() {};
+  const Page = function Page() {};
+  const hostFiber = { type: 'input', memoizedProps: { id: 'name', value: '' }, return: null };
+  const fieldFiber = { type: Field, memoizedProps: { label: 'Name', onChange: () => {}, value: 'x' }, memoizedState: { next: { next: null } }, _debugSource: { fileName: '/src/components/Field.tsx', lineNumber: 12 }, return: null };
+  const formFiber = { type: Form, memoizedProps: { invoiceId: 42, items: [1, 2, 3] }, memoizedState: null, return: null };
+  const pageFiber = { type: Page, memoizedProps: {}, return: null };
+  const divFiber = { type: 'div', memoizedProps: {}, return: pageFiber };
+  hostFiber.return = fieldFiber; fieldFiber.return = formFiber; formFiber.return = divFiber;
+  input[key] = hostFiber;
+  root._reactRootContainer = {};
+</script>

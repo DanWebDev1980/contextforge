@@ -4,13 +4,18 @@
 // and /g/collect hits. It does not read GA4 *reports*; that needs the Data API
 // and OAuth, which is a different (server-side) tool. For checking that a change
 // still fires the right events with the right params, this is the useful half.
+//
+// Network hooks come from the shared interceptor (core/net/intercept.js); only
+// dataLayer.push is patched here, and restored on stop().
+
+import { subscribe } from '../../core/net/intercept.js';
 
 const COLLECT = /google-analytics\.com\/(g\/collect|mp\/collect)|analytics\.google\.com\/g\/collect/;
 
 /** GA4 encodes events as query params; decode them into something readable. */
 export function parseCollect(url, body) {
   const events = [];
-  const base = new URL(url, location.href);
+  const base = new URL(url, typeof location !== 'undefined' ? location.href : 'http://localhost/');
   const shared = Object.fromEntries(base.searchParams);
 
   const decodeOne = (params) => {
@@ -35,62 +40,33 @@ export function parseCollect(url, body) {
   return events.map((e) => ({
     ...e,
     measurementId: shared.tid ?? null,
-    page: shared.dl ?? location.href,
+    page: shared.dl ?? (typeof location !== 'undefined' ? location.href : null),
     at: new Date().toISOString(),
     transport: 'collect',
   }));
 }
 
 /**
- * Patch the three ways a page can send a beacon, plus dataLayer.push.
- * Returns a stop() that restores every original — leaving these patched after
- * the tool closes would be rude to the host app.
+ * Subscribe to the interceptor for /g/collect hits and patch dataLayer.push.
+ * Returns { backlog, stop } — stop() unsubscribes and restores dataLayer.push.
  */
 export function observe(onEvent) {
-  const originals = {
-    fetch: window.fetch,
-    open: XMLHttpRequest.prototype.open,
-    send: XMLHttpRequest.prototype.send,
-    beacon: navigator.sendBeacon,
-    push: null,
-  };
-
-  window.fetch = function patchedFetch(input, init) {
+  const seen = new Set();
+  const emit = (rec) => {
     try {
-      const url = typeof input === 'string' ? input : input?.url ?? '';
-      if (COLLECT.test(url)) {
-        const body = typeof init?.body === 'string' ? init.body : null;
-        parseCollect(url, body).forEach(onEvent);
-      }
+      if (!COLLECT.test(rec.url) || seen.has(rec.id)) return;
+      seen.add(rec.id);
+      parseCollect(rec.url, typeof rec.requestBody === 'string' ? rec.requestBody : null).forEach(onEvent);
     } catch { /* never let instrumentation break the page */ }
-    return originals.fetch.apply(this, arguments);
   };
-
-  XMLHttpRequest.prototype.open = function patchedOpen(method, url) {
-    this.__cfUrl = url;
-    return originals.open.apply(this, arguments);
-  };
-  XMLHttpRequest.prototype.send = function patchedSend(body) {
-    try {
-      if (this.__cfUrl && COLLECT.test(this.__cfUrl)) {
-        parseCollect(this.__cfUrl, typeof body === 'string' ? body : null).forEach(onEvent);
-      }
-    } catch { /* ignore */ }
-    return originals.send.apply(this, arguments);
-  };
-
-  navigator.sendBeacon = function patchedBeacon(url, data) {
-    try {
-      if (COLLECT.test(url)) {
-        parseCollect(url, typeof data === 'string' ? data : null).forEach(onEvent);
-      }
-    } catch { /* ignore */ }
-    return originals.beacon.apply(navigator, arguments);
-  };
+  const unsubscribe = subscribe({
+    request: (rec) => { emit(rec); return null; },
+    beacon: ({ url, body }) => { try { if (COLLECT.test(url)) parseCollect(url, body).forEach(onEvent); } catch { /* ignore */ } },
+  });
 
   // dataLayer pushes show intent even when the tag never fires
   const dl = (window.dataLayer ||= []);
-  originals.push = dl.push;
+  const originalPush = dl.push;
   dl.push = function patchedPush(...args) {
     for (const arg of args) {
       try {
@@ -106,7 +82,7 @@ export function observe(onEvent) {
         }
       } catch { /* ignore */ }
     }
-    return originals.push.apply(this, args);
+    return originalPush.apply(this, args);
   };
 
   // replay what already fired before the tool loaded
@@ -118,11 +94,9 @@ export function observe(onEvent) {
   return {
     backlog,
     stop() {
-      window.fetch = originals.fetch;
-      XMLHttpRequest.prototype.open = originals.open;
-      XMLHttpRequest.prototype.send = originals.send;
-      navigator.sendBeacon = originals.beacon;
-      if (originals.push) dl.push = originals.push;
+      unsubscribe();
+      if (dl.push === arguments.callee?.patchedPush) { /* noop */ }
+      if (window.dataLayer === dl) dl.push = originalPush;
     },
   };
 }
