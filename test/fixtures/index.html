@@ -1,0 +1,43 @@
+<!doctype html><meta charset="utf-8"><title>fixture</title>
+<style>
+  * { box-sizing: border-box; }
+  :root { --brand: #3b6fe0; --radius: 8px; }
+  body { margin:0; font-family: Inter, sans-serif; min-height: 2400px; }
+  .card { display:flex; flex-direction:column; gap:12px; padding:16px 20px;
+          width:320px; background:#ffffff; border:1px solid #e2e5ea;
+          border-radius:var(--radius); box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .card__title { font-size:18px; font-weight:600; line-height:24px; color:#111827; margin:0; }
+  .card__body { font-size:14px; line-height:20px; color:#4b5563; margin:0; }
+  .btn { font-size:14px; font-weight:600; padding:8px 16px; border-radius:6px;
+         background:var(--brand); color:#fff; border:none; text-transform:uppercase;
+         letter-spacing:0.5px; }
+  .hidden { display:none; }
+  @media (min-width: 600px) { .card { margin: 0; } }
+  @media (max-width: 300px) { .card { width: 100%; } }
+</style>
+<div class="card" id="card">
+  <h2 class="card__title">Filter results</h2>
+  <p class="card__body">Narrow the list by category.</p>
+  <button class="btn">Apply</button>
+  <span class="hidden">should not be captured</span>
+</div>
+<main id="main" aria-label="Results">
+  <h1>Invoices</h1>
+  <nav aria-label="Pages"><a href="/api.html">API page</a> <a href="/form1.html">Wizard</a></nav>
+  <section><h2>Open</h2><p style="color:#bbb;background:#fff">Low contrast text here.</p>
+    <label for="q">Search</label><input id="q" type="text" placeholder="search invoices">
+    <button type="button" aria-label="Refresh list">↻</button>
+    <img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="">
+  </section>
+</main>
+<script>
+  // App-like state so checkpoints have something to capture.
+  localStorage.setItem('app.user', JSON.stringify({ id: 42, name: 'Dana' }));
+  localStorage.setItem('auth.token', 'secret-jwt-value');
+  localStorage.setItem('apiBase', location.origin + '/api');
+  localStorage.setItem('ff_newInvoices', 'true');
+  sessionStorage.setItem('wizard.step', '3');
+  document.cookie = 'theme=dark; path=/';
+  document.cookie = 'session_id=abc123; path=/';
+  window.dataLayer = window.dataLayer || [];
+</script>

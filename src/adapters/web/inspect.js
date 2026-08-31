@@ -164,3 +164,112 @@ export function normalizeTree(root, { maxDepth = 6, maxNodes = 400, skipHidden =
   const tree = walk(root, 0);
   return { tree, nodeCount: count, truncated };
 }
+
+// ---------------------------------------------------------------------------
+// Design tokens and rule context. Cross-origin stylesheets throw on .cssRules;
+// those are skipped and counted so the panel can say "n sheets unreadable".
+// ---------------------------------------------------------------------------
+
+function* walkRules(rules, ctx = []) {
+  for (const rule of rules) {
+    if (rule.type === 1 /* STYLE */) yield { rule, ctx };
+    else if (rule.cssRules) {
+      const label = rule.type === 4 ? `@media ${rule.conditionText ?? rule.media?.mediaText ?? ''}`
+        : rule.type === 12 ? `@supports ${rule.conditionText ?? ''}`
+          : rule.constructor?.name === 'CSSContainerRule' ? `@container ${rule.conditionText ?? ''}`
+            : rule.constructor?.name === 'CSSLayerBlockRule' ? `@layer ${rule.name ?? ''}`
+              : null;
+      yield* walkRules(rule.cssRules, label ? [...ctx, { label, rule }] : ctx);
+    }
+  }
+}
+
+function safeMatches(node, selector) {
+  try { return node.matches(selector); } catch { return false; }
+}
+
+function conditionMatches(ctxEntry) {
+  const r = ctxEntry.rule;
+  try {
+    if (r.type === 4) return matchMedia(r.conditionText ?? r.media.mediaText).matches;
+    if (r.type === 12) return CSS.supports(r.conditionText);
+  } catch { /* unknown */ }
+  return null;
+}
+
+/**
+ * Every rule that applies to `node`, with the @media / @container / @supports
+ * context each lives under, plus the CSS custom properties in effect on the node.
+ */
+export function ruleContext(node) {
+  const matched = [];
+  const varsUsed = new Set();
+  const varsDefined = new Map();     // name → { value, from }
+  let unreadable = 0;
+  for (const sheet of document.styleSheets) {
+    let rules;
+    try { rules = sheet.cssRules; } catch { unreadable += 1; continue; }
+    if (!rules) continue;
+    const from = sheet.href ? sheet.href.split('/').pop() : '<style>';
+    for (const { rule, ctx } of walkRules(rules)) {
+      const hitsNode = safeMatches(node, rule.selectorText);
+      const hitsRoot = /(^|,)\s*(:root|html)\s*(,|$)/.test(rule.selectorText ?? '');
+      if (!hitsNode && !hitsRoot) continue;
+      for (const name of rule.style) {
+        if (name.startsWith('--')) varsDefined.set(name, { value: rule.style.getPropertyValue(name).trim(), from, selector: rule.selectorText });
+      }
+      // var() references live in the declaration text; shorthands hide them from longhand iteration
+      if (hitsNode) for (const m of (rule.style.cssText ?? '').matchAll(/var\((--[\w-]+)/g)) varsUsed.add(m[1]);
+      if (hitsNode) {
+        matched.push({
+          selector: rule.selectorText,
+          from,
+          context: ctx.map((c) => ({ label: c.label, matches: conditionMatches(c) })),
+          declarations: [...rule.style].filter((n) => !n.startsWith('--')).map((n) => `${n}: ${rule.style.getPropertyValue(n).trim()}${rule.style.getPropertyPriority(n) ? ' !important' : ''}`),
+        });
+      }
+    }
+  }
+  const cs = getComputedStyle(node);
+  const tokens = [...varsUsed].map((name) => ({
+    name,
+    value: cs.getPropertyValue(name).trim() || varsDefined.get(name)?.value || null,
+    definedIn: varsDefined.get(name)?.selector ?? null,
+  }));
+  return { rules: matched, tokens, unreadableSheets: unreadable };
+}
+
+/** A normalized node back to CSS a developer can paste. */
+export function toCSS(node, { selector } = {}) {
+  const lines = [];
+  const add = (prop, value) => { if (value != null && value !== '' && value !== 'none') lines.push(`  ${prop}: ${value};`); };
+  const pxv = (v) => (v == null ? null : `${v}px`);
+  const l = node.layout ?? {};
+  add('display', l.display);
+  if (l.direction && /flex/.test(l.display ?? '')) add('flex-direction', l.direction);
+  if (l.justify && l.justify !== 'normal') add('justify-content', l.justify);
+  if (l.align && l.align !== 'normal') add('align-items', l.align);
+  add('gap', pxv(l.gap));
+  const pd = l.padding;
+  if (pd && [pd.top, pd.right, pd.bottom, pd.left].some((v) => v)) add('padding', `${pd.top ?? 0}px ${pd.right ?? 0}px ${pd.bottom ?? 0}px ${pd.left ?? 0}px`);
+  if (node.box?.width != null) add('width', pxv(node.box.width));
+  if (node.box?.height != null) add('height', pxv(node.box.height));
+  const t = node.typography ?? {};
+  if (t.fontFamily) add('font-family', /\s/.test(t.fontFamily) ? `"${t.fontFamily}"` : t.fontFamily);
+  add('font-size', pxv(t.fontSize));
+  add('font-weight', t.fontWeight);
+  add('line-height', pxv(t.lineHeight));
+  if (t.letterSpacing) add('letter-spacing', pxv(t.letterSpacing));
+  if (t.textAlign && t.textAlign !== 'start') add('text-align', t.textAlign);
+  add('text-transform', t.textTransform);
+  add('color', t.color);
+  if (node.fill?.background && node.fill.background !== '#00000000') add('background', node.fill.background);
+  const b = node.border ?? {};
+  if (b.width) add('border', `${b.width}px ${b.style ?? 'solid'} ${b.color ?? 'currentColor'}`);
+  const r = b.radius ?? {};
+  const rv = [r.tl, r.tr, r.br, r.bl];
+  if (rv.some((v) => v)) add('border-radius', rv.every((v) => v === rv[0]) ? pxv(rv[0]) : rv.map((v) => `${v ?? 0}px`).join(' '));
+  for (const fx of node.effects ?? []) add('box-shadow', `${fx.inset ? 'inset ' : ''}${fx.x ?? 0}px ${fx.y ?? 0}px ${fx.blur ?? 0}px ${fx.spread ?? 0}px ${fx.color ?? ''}`.trim());
+  if (node.opacity != null) add('opacity', node.opacity);
+  return `${selector ?? node.ref ?? node.name ?? '.element'} {\n${lines.join('\n')}\n}`;
+}

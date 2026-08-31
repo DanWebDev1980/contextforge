@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>wizard step 1</title>
+<h1>Step 1</h1>
+<form method="post" action="/submit" id="f1">
+  <label for="name">Customer name</label><input id="name" name="name" type="text">
+  <label>Plan <select name="plan"><option value="basic">Basic</option><option value="pro">Pro</option></select></label>
+  <label><input type="checkbox" name="agree" value="yes"> I agree</label>
+  <input type="password" name="pin" data-testid="pin">
+  <button type="submit" data-testid="next">Next</button>
+</form>
