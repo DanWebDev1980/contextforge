@@ -135,6 +135,14 @@ refuses to publish if the tag and `package.json` disagree, and then publishes wi
 provenance. There is no npm token stored in the repository, and there should never be
 one.
 
+Before the first tag-driven release, trusted publishing has to be enabled once on
+npmjs.com for this package (Settings → Trusted publishers → GitHub Actions, repository
+`DanWebDev1980/browser-command-center`, workflow `release.yml`). Because npm cannot
+configure a publisher for a package that does not exist yet, **version 1.0.0 is
+published by hand** (`npm publish`); every version after it is a tag. If you add a
+required-reviewer gate later, set `environment:` in the workflow and name the same
+environment on npm.
+
 Version policy: the CLI and the prebuilt `dist/bcc.js` are the stable contract and
 follow semver. The ESM library exports are experimental and may change in a minor
 release until they are declared stable in the changelog.

@@ -34,8 +34,9 @@ First public release on npm.
   origins and serves the launcher page.
 - **Experimental ESM exports** so you can build your own bundle from a subset
   of tools: `browser-command-center`, `.../tools`, `.../tools/<id>`.
-- CI on Node 20 and 22 running 33 unit checks and 110 browser checks against
-  the real bundle in headless Chromium.
+- CI running 33 unit checks on Node 20 and 22, 110 browser checks against the
+  real bundle in headless Chromium on Node 22, and a packaging job that installs
+  the built tarball and drives the CLI from an unrelated directory.
 
 ### Known limitations
 

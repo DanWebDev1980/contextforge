@@ -15,7 +15,6 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: npm
     permissions:
       contents: read
       # Required for npm trusted publishing (OIDC) and build provenance.
