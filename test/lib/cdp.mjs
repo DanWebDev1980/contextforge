@@ -9,6 +9,15 @@ import { join } from 'node:path';
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export async function launchChrome({ chrome = process.env.CHROME ?? 'chromium', port = 9333, width = 1200, height = 900 } = {}) {
+  // Node exposes a global WebSocket by default from 22 onwards; on 20 it sits
+  // behind --experimental-websocket. Say so, rather than dying on a bare
+  // ReferenceError deep inside connect().
+  if (typeof WebSocket === 'undefined') {
+    throw new Error(
+      `The browser suite needs a global WebSocket (CDP runs over one), and Node ${process.versions.node} has none. `
+      + 'Use Node 22 or newer, or re-run with --experimental-websocket. The unit suite needs neither.',
+    );
+  }
   // A throwaway profile per run: a persistent one carries localStorage and the
   // HTTP cache between runs, which silently corrupts every assertion.
   const profile = await mkdtemp(join(tmpdir(), 'bcc-test-'));

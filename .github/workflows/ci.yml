@@ -11,25 +11,38 @@ permissions:
 
 jobs:
   test:
-    name: test (node ${{ matrix.node }})
+    name: ${{ matrix.suite }} suite (node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        node: ['20', '22']
+        include:
+          # The CDP harness the browser suite uses talks over the global
+          # WebSocket, which Node only exposes by default from 22. Node 20 is
+          # still the floor the package supports, so it gets the logic suite.
+          - node: '20'
+            suite: unit
+          - node: '22'
+            suite: full
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
           cache: npm
 
       - run: npm ci
 
-      # The browser suite drives the real bundle over CDP. The runner image
-      # ships Google Chrome; fall back to any chromium on PATH.
+      - name: Build
+        run: npm run build
+
+      - name: Unit suite
+        run: npm run test:unit
+
+      # The runner image ships Google Chrome; fall back to any chromium on PATH.
       - name: Find a browser
+        if: matrix.suite == 'full'
         run: |
           for c in google-chrome chromium chromium-browser; do
             if command -v "$c" >/dev/null 2>&1; then
@@ -41,15 +54,17 @@ jobs:
           echo "::error::no Chrome or Chromium on PATH"
           exit 1
 
-      - run: npm test
+      - name: Browser suite
+        if: matrix.suite == 'full'
+        run: npm run test:browser
 
   package:
     name: package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
@@ -78,7 +93,7 @@ jobs:
             console.log(`tarball ok: ${p.entryCount} files, ${(p.size / 1024).toFixed(0)} kB`);
           '
 
-      - name: Install the tarball and run the CLI from a foreign cwd
+      - name: Install the tarball and drive the CLI from a foreign cwd
         run: |
           npm pack --pack-destination "$RUNNER_TEMP"
           mkdir -p "$RUNNER_TEMP/consumer"

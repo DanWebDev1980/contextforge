@@ -14,9 +14,12 @@ npm run doctor        # tells you what is missing and how to fix it
 npm test              # 33 unit checks + 110 browser checks
 ```
 
-Node 20+ and a Chromium on `PATH` (`CHROME=...` to point elsewhere). Every pull
-request runs the same suite on Node 20 and 22, plus a packaging job that installs the
-built tarball and drives the CLI from an unrelated directory.
+The package itself needs Node 20+. The **browser suite additionally needs Node 22+**,
+because the CDP harness talks over the global `WebSocket` that Node only exposes by
+default from 22 (on 20 it is behind `--experimental-websocket`), plus a Chromium on
+`PATH` (`CHROME=...` to point elsewhere). Every pull request runs the unit suite on
+Node 20, the full suite on Node 22, and a packaging job that installs the built tarball
+and drives the CLI from an unrelated directory.
 
 ## Layout
 
@@ -94,7 +97,7 @@ npm run test:unit      # pure logic only, no browser needed
 node test/browser.mjs journeys mock   # only sections whose name contains these
 ```
 
-`test/browser.mjs` needs `chromium` on PATH (override with `CHROME=...`). It starts a
+`test/browser.mjs` needs Node 22+ and `chromium` on PATH (override with `CHROME=...`). It starts a
 throwaway profile and a no-store fixture app on two ports — both deliberate, as a
 persistent profile silently carries `localStorage` and cached HTML between runs.
 

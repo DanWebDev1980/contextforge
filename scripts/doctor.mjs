@@ -26,7 +26,8 @@ const run = (cmd, opts = {}) => { try { return execSync(cmd, { cwd: ROOT, stdio:
 console.log(`BrowserCommandCenter doctor  (${DEV ? 'checkout' : 'installed package'}: ${ROOT})\n`);
 
 const [major] = process.versions.node.split('.').map(Number);
-major >= 20 ? ok(`Node ${process.versions.node}`) : bad(`Node ${process.versions.node} is too old`, 'install Node 20+ (needed for the built-in WebSocket used by the browser tests)');
+major >= 20 ? ok(`Node ${process.versions.node}`) : bad(`Node ${process.versions.node} is too old`, 'install Node 20 or newer');
+if (DEV && major >= 20 && major < 22) note('Node 22+ is needed for the browser suite (global WebSocket); the unit suite works here');
 
 if (DEV) {
   if (!existsSync(at('node_modules/esbuild'))) {
