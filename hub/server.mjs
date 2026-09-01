@@ -19,11 +19,15 @@ import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir, readdir } from 'node:fs/promises';
 import { existsSync, createReadStream } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const PORT = Number(process.env.BCC_PORT ?? process.env.CONTEXTFORGE_PORT ?? 7373);
 const DIR = resolve(process.env.BCC_HUB_DIR ?? '.bcc-hub');
 const LEGACY = resolve('.contextforge-hub/items.json');
-const DIST = resolve('dist');
+// The store follows the cwd (captures belong to the project you are working in);
+// dist/ is read from the package itself, so `npx browser-command-center hub` works
+// from any directory.
+const DIST = fileURLToPath(new URL('../dist/', import.meta.url)).replace(/[\\/]$/, '');
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.md': 'text/markdown' };
 const NS = /^[a-z0-9_-]{1,40}$/i;
@@ -105,10 +109,13 @@ export const server = createServer(async (req, res) => {
   json(res, 404, { error: 'not found' });
 });
 
-if (process.argv[1] && import.meta.url.endsWith(process.argv[1].split(/[\\/]/).pop())) {
-  server.listen(PORT, '127.0.0.1', () => {
-    console.log(`bcc hub        →  http://localhost:${PORT}`);
-    console.log(`  launcher     →  http://localhost:${PORT}/`);
+/** Start the hub on the loopback interface. Returns the http server. */
+export function start({ port = PORT } = {}) {
+  return server.listen(port, '127.0.0.1', () => {
+    console.log(`bcc hub        →  http://localhost:${port}`);
+    console.log(`  launcher     →  http://localhost:${port}/`);
     console.log(`  store        →  ${DIR}/<namespace>.json`);
   });
 }
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) start();

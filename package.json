@@ -1,9 +1,62 @@
 {
   "name": "browser-command-center",
   "version": "1.0.0",
-  "description": "BrowserCommandCenter (BCC) — the web developer's power house of tools. One script, pasted once: AI context capture, state checkpoints, network recording and mocking, journey replay. No extension, no install.",
+  "description": "One script, pasted once: AI context capture, state checkpoints, network recording and mocking, and journey replay in any browser tab. No extension, no install, no permissions.",
+  "keywords": [
+    "devtools",
+    "devtools-snippet",
+    "bookmarklet",
+    "debugging",
+    "browser",
+    "no-install",
+    "ai-context",
+    "llm",
+    "prompt",
+    "copilot",
+    "network-mocking",
+    "msw",
+    "har",
+    "checkpoint",
+    "accessibility",
+    "figma"
+  ],
+  "homepage": "https://github.com/DanWebDev1980/browser-command-center#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DanWebDev1980/browser-command-center.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DanWebDev1980/browser-command-center/issues"
+  },
   "license": "MIT",
+  "author": "BrowserCommandCenter contributors",
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "browser-command-center": "bin/bcc.mjs",
+    "bcc": "bin/bcc.mjs"
+  },
+  "exports": {
+    ".": "./src/app/main.js",
+    "./tools": "./src/tools/index.js",
+    "./tools/*": "./src/tools/*.js",
+    "./dist/bcc.js": "./dist/bcc.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "bin/",
+    "dist/bcc.js",
+    "dist/index.html",
+    "hub/",
+    "scripts/",
+    "src/",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "node build.mjs",
     "build:split": "node build.mjs --split",
@@ -15,7 +68,8 @@
     "doctor": "node scripts/doctor.mjs",
     "test": "node build.mjs --split --quiet && node test/smoke.mjs && node test/browser.mjs",
     "test:unit": "node test/smoke.mjs",
-    "test:browser": "node build.mjs --split --quiet && node test/browser.mjs"
+    "test:browser": "node build.mjs --split --quiet && node test/browser.mjs",
+    "prepack": "node build.mjs --quiet"
   },
   "devDependencies": {
     "esbuild": "^0.25.0"

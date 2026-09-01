@@ -5,9 +5,10 @@
 import { readFile } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { platform } from 'node:os';
-import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const file = resolve('dist/bcc.js');
+// Resolved from the package, not the cwd, so this works under `npx`.
+const file = fileURLToPath(new URL('../dist/bcc.js', import.meta.url));
 let code;
 try { code = await readFile(file, 'utf8'); } catch { console.error('dist/bcc.js not found — run `npm run build` first.'); process.exit(1); }
 

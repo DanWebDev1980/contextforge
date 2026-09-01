@@ -5,25 +5,29 @@
 import { readFile, writeFile, mkdir, cp, rm } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const pkg = JSON.parse(await readFile('package.json', 'utf8'));
+// Sources come from the package; the release folder is written into the cwd.
+const from = (p) => fileURLToPath(new URL(`../${p}`, import.meta.url));
+const pkg = JSON.parse(await readFile(from('package.json'), 'utf8'));
 let code;
-try { code = await readFile(resolve('dist/bcc.js'), 'utf8'); } catch { console.error('dist/bcc.js not found — run `npm run build` first.'); process.exit(1); }
+try { code = await readFile(from('dist/bcc.js'), 'utf8'); } catch { console.error('dist/bcc.js not found — run `npm run build` first.'); process.exit(1); }
 const sha = createHash('sha256').update(code).digest('hex');
 const dir = resolve('release', `bcc-${pkg.version}`);
 await rm(dir, { recursive: true, force: true });
 await mkdir(join(dir, 'hub'), { recursive: true });
-await cp(resolve('dist/bcc.js'), join(dir, 'bcc.js'));
-await cp(resolve('dist/index.html'), join(dir, 'index.html'));
-await cp(resolve('hub/server.mjs'), join(dir, 'hub/server.mjs'));
+await mkdir(join(dir, 'dist'), { recursive: true });
+await cp(from('dist/bcc.js'), join(dir, 'dist/bcc.js'));
+await cp(from('dist/index.html'), join(dir, 'dist/index.html'));
+await cp(from('hub/server.mjs'), join(dir, 'hub/server.mjs'));
 await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'browser-command-center', version: pkg.version, type: 'module', private: true, scripts: { hub: 'node hub/server.mjs' } }, null, 2));
 await writeFile(join(dir, 'INSTALL.txt'), `BrowserCommandCenter ${pkg.version}
 ${'='.repeat(30)}
 sha256(bcc.js) = ${sha}
 
 INSTALL (Edge or Chrome, no admin rights, ~1 minute)
-  1. Open index.html in the browser (double-click). Click "Copy bcc.js".
-     -- or open bcc.js in Notepad, Ctrl+A, Ctrl+C.
+  1. Open dist/index.html in the browser (double-click). Click "Copy bcc.js".
+     -- or open dist/bcc.js in Notepad, Ctrl+A, Ctrl+C.
   2. On any web page: F12 → Ctrl+Shift+P → type "snippets" → "Show Snippets".
   3. "+ New snippet" → paste → Ctrl+S → name it: bcc
   4. Done. From now on, on any tab: F12 → Ctrl+P → type  !bcc  → Enter.
