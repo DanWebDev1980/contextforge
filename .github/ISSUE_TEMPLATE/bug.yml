@@ -1,0 +1,58 @@
+name: Bug report
+description: Something in BCC does not work
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before filing: run **Diagnose** (palette → `diag`) and paste its output
+        below. It usually contains the whole answer.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got.
+      placeholder: |
+        1. Opened the palette on …
+        2. Ran the tool "…"
+        3. Expected …, got …
+    validations:
+      required: true
+  - type: textarea
+    id: diagnose
+    attributes:
+      label: Diagnose output
+      description: Palette → `diag` → Copy. Redact anything sensitive first.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: BCC version
+      description: The dock shows it, or run `npx browser-command-center --version`.
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Edge 129 on Windows 11
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How is BCC loaded?
+      options:
+        - DevTools Snippet
+        - Console paste
+        - Bookmarklet
+        - Imported as a library
+    validations:
+      required: true
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Anything red in the console, including the full stack.
+      render: text

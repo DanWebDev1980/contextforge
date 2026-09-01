@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish (e.g. v1.0.1)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      # Required for npm trusted publishing (OIDC) and build provenance.
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: https://registry.npmjs.org
+          cache: npm
+
+      # Trusted publishing (OIDC, no stored token) needs npm 11.5.1 or newer,
+      # which is ahead of the version bundled with Node 22.
+      - run: npm install -g npm@latest
+
+      - run: npm ci
+
+      - name: Tag must match package.json
+        run: |
+          tag="${{ github.event.inputs.tag || github.ref_name }}"
+          pkg="v$(node -p "require('./package.json').version")"
+          if [ "$tag" != "$pkg" ]; then
+            echo "::error::tag $tag does not match package.json ($pkg)"
+            exit 1
+          fi
+          echo "publishing $pkg"
+
+      - name: Find a browser
+        run: |
+          for c in google-chrome chromium chromium-browser; do
+            if command -v "$c" >/dev/null 2>&1; then
+              echo "CHROME=$c" >> "$GITHUB_ENV"; exit 0
+            fi
+          done
+          echo "::error::no Chrome or Chromium on PATH"
+          exit 1
+
+      - run: npm test
+
+      - name: Publish to npm
+        run: npm publish --provenance --access public

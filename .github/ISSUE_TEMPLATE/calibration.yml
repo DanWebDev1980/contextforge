@@ -1,0 +1,39 @@
+name: Selector calibration report
+description: Inspect Figma, Figma stickies or Octane story read the wrong thing
+labels: [calibration]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These three adapters scrape products with obfuscated, build-specific
+        class names, so they are expected to drift. **Diagnose** shows what the
+        adapters made of the DOM — which container won, why the others were
+        rejected, and which labels went unmapped. That output is what makes a
+        fix possible, so please include it.
+  - type: dropdown
+    id: adapter
+    attributes:
+      label: Which adapter?
+      options: [Inspect Figma, Figma stickies, Octane story]
+    validations:
+      required: true
+  - type: textarea
+    id: diagnose
+    attributes:
+      label: Diagnose output
+      description: Palette → `diag` → Copy. Redact any real ticket content.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should it have read?
+      description: The field or value that came out wrong or missing.
+    validations:
+      required: true
+  - type: input
+    id: product
+    attributes:
+      label: Product version or flavour
+      placeholder: Figma web, Sept 2026 / ALM Octane 16.1.100 on-prem

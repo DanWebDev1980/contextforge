@@ -1,0 +1,36 @@
+name: Tool request
+description: Propose a new tool for the palette
+labels: [enhancement, tool]
+body:
+  - type: textarea
+    id: chore
+    attributes:
+      label: What browser chore does this remove?
+      description: >
+        BCC exists to delete manual steps. Describe the thing you currently do
+        by hand, and how often.
+    validations:
+      required: true
+  - type: textarea
+    id: output
+    attributes:
+      label: What does the tool put on your clipboard or on the page?
+      description: >
+        Every tool ends in either a change to the page or text you can paste.
+        Sketch the output.
+    validations:
+      required: true
+  - type: dropdown
+    id: group
+    attributes:
+      label: Which group does it belong to?
+      options: [context, state, wire, journeys, design, calibration, bcc]
+    validations:
+      required: true
+  - type: input
+    id: budget
+    attributes:
+      label: Rough size
+      description: >
+        The bundle has a hard 250 KB budget. If this needs a big dependency,
+        say so now.
