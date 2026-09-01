@@ -1,5 +1,10 @@
 # BrowserCommandCenter (BCC)
 
+[![npm](https://img.shields.io/npm/v/browser-command-center.svg)](https://www.npmjs.com/package/browser-command-center)
+[![CI](https://github.com/DanWebDev1980/browser-command-center/actions/workflows/ci.yml/badge.svg)](https://github.com/DanWebDev1980/browser-command-center/actions/workflows/ci.yml)
+[![licence: MIT](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+[![node](https://img.shields.io/node/v/browser-command-center.svg)](https://nodejs.org)
+
 > **The web developer's power house of tools.**
 > One script. Paste it once. Every browser chore a developer does by hand — capturing
 > context for an AI, saving and restoring app state, recording and mocking API traffic,
@@ -23,10 +28,15 @@ text on your clipboard, structured so Copilot Chat (or any AI) can act on it dir
 ## Install (Edge or Chrome, ~1 minute, no admin rights)
 
 ```bash
-git clone <your-fork> && cd browser-command-center
-npm install
-npm run copy          # builds, puts dist/bcc.js on your clipboard, prints the steps below
+npx browser-command-center      # puts the script on your clipboard, prints the steps below
 ```
+
+That is the whole install: one command, no clone, no build, nothing added to your
+project. (Node 20+ is the only requirement, and only for this one command — the script
+itself is plain browser JavaScript.)
+
+No Node at all? Grab the bundle from a CDN instead and skip to step 2:
+[`unpkg.com/browser-command-center/dist/bcc.js`](https://unpkg.com/browser-command-center/dist/bcc.js).
 
 Then, **as a DevTools Snippet** (recommended — survives restarts, immune to CSP):
 
@@ -44,8 +54,9 @@ Other paths, in order of preference:
   The fallback when Snippets are disabled by policy.
 - **Bookmarklet** — one click, offered on `dist/index.html`, but blocked by any site
   with a strict `script-src` (Figma included). **Diagnose → CSP** tells you.
-- **Carry it somewhere**: `npm run pack` makes `release/bcc-<version>/` with the script,
-  the launcher, the hub and a four-step `INSTALL.txt`. Zip it and send it.
+- **Carry it somewhere**: `npx browser-command-center pack` writes `release/bcc-<version>/`
+  into the current directory with the script, the launcher, the hub and a four-step
+  `INSTALL.txt`. Zip it and send it to a machine with no npm at all.
 
 Console-injected code dies with a full page load. Re-run the snippet (`Ctrl+P`, `!bcc`)
 — a journey mid-run or mid-recording resumes on its own.
@@ -163,7 +174,7 @@ request replay is the sturdier tool.
 
 `localStorage` is per-origin. Every store (basket, checkpoints, recordings, journeys,
 mock rules) has **Export / Import** (JSON file) and **Copy / Paste JSON**. The optional
-**hub** (`npm run hub`, loopback `:7373`) mirrors the basket automatically and serves
+**hub** (`npx browser-command-center hub`, loopback `:7373`) mirrors the basket and serves
 the launcher; **Pull hub** merges everything from every origin.
 
 Console-injected code is exempt from `script-src`, but the `fetch()` it makes is still
@@ -212,18 +223,63 @@ beside them; rich text becomes markdown. Field names live in
 Reads what the page **sends** — `dataLayer` pushes and `/g/collect` hits — via the
 shared interceptor. It does not read GA4 *reports*; that needs OAuth and a server.
 
-## Scripts
+## The command line
+
+Installed or run through `npx`, the package exposes `browser-command-center` (and the
+short alias `bcc`). Everything it reads comes from the package; everything it writes
+goes to the directory you are standing in.
+
+| Command | What it does |
+| --- | --- |
+| `npx browser-command-center` | Put `bcc.js` on the clipboard, print the Snippet steps. The default. |
+| `npx browser-command-center hub` | Run the loopback hub and serve the launcher. `--port`, or `BCC_PORT` / `BCC_HUB_DIR`. |
+| `npx browser-command-center pack` | Write `release/bcc-<version>/` with `INSTALL.txt` into the cwd. |
+| `npx browser-command-center path` | Print the absolute path of the bundled `bcc.js` (pipe it wherever you like). |
+| `npx browser-command-center doctor` | Check Node, the bundle, and a running hub. |
+
+## Use as a library (experimental)
+
+If you want a smaller bundle with only the tools you use, or your own tool alongside
+them, import the shell and compose it yourself:
+
+```js
+import { boot } from 'browser-command-center';
+import inspectWeb from 'browser-command-center/tools/inspect-web';
+import checkpoints from 'browser-command-center/tools/checkpoints';
+import myTool from './my-tool.js';
+
+boot({ tools: [inspectWeb, checkpoints, myTool] });
+```
+
+`browser-command-center/tools` exports the whole `TOOLS` catalogue if you want all of
+them; importing it defeats tree-shaking, so name the individual tools when size matters.
+The tool definition shape is documented in [CONTRIBUTING.md](CONTRIBUTING.md).
+
+**Why experimental:** the build stamps the version in at bundle time, so under your
+bundler `VERSION` reads `'dev'`; and this surface may move before 2.0. The CLI and the
+prebuilt bundle are the stable contract.
+
+## Developing
+
+```bash
+git clone https://github.com/DanWebDev1980/browser-command-center
+cd browser-command-center
+npm install
+npm run doctor        # checks Node, deps, a Chromium for the tests, the build, the suite
+npm run copy          # build, then clipboard + Snippet steps
+```
 
 | Command | What it does |
 | --- | --- |
 | `npm run build` | `dist/bcc.js` + `dist/index.html`. Fails over the 250 KB budget. |
-| `npm run copy` | Build, then put `bcc.js` on the clipboard and print the Snippet steps. |
-| `npm run pack` | Build, then write `release/bcc-<version>/` with `INSTALL.txt` to carry elsewhere. |
+| `npm run watch` | Rebuild on change. |
 | `npm run serve` | Build and start the hub (`http://localhost:7373/` serves the launcher). |
-| `npm run hub` | Just the hub. `BCC_PORT` / `BCC_HUB_DIR` override port and store. |
-| `npm run doctor` | Checks Node, deps, a Chromium for tests, the build, the unit suite, the hub. `-- --fix` installs and builds. |
+| `npm run doctor` | Environment check. `-- --fix` installs and builds. |
 | `npm test` | Unit suite + browser suite (real Chromium over CDP). `npm run test:unit` for logic only. |
 | `npm run build:split` | Also one bundle per tool, each auto-starting (used by the tests). |
+
+The browser suite needs a Chromium on `PATH`; point `CHROME` at another binary if
+yours is named differently (`CHROME=msedge`, `CHROME=google-chrome`).
 
 ## Verification status
 
@@ -253,6 +309,18 @@ workflow, not a failure.
 - `probe` redacts password inputs; the journey recorder never stores password values.
 - Captured content ends up in an LLM prompt. **Read what you are pasting.**
 
+## Contributing
+
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md) for the
+layout, how to add a tool, and the rules that keep the bundle small. Bug reports are
+most useful with **Diagnose** output attached. Everyone is expected to follow the
+[Code of Conduct](CODE_OF_CONDUCT.md).
+
+Please report security problems privately rather than in an issue — see
+[SECURITY.md](SECURITY.md), which also sets out what is and is not in scope.
+
+Release notes live in [CHANGELOG.md](CHANGELOG.md).
+
 ## Licence
 
-MIT.
+[MIT](LICENSE).

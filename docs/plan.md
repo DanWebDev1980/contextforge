@@ -595,3 +595,99 @@ Everything in phases 0–3 shipped. Deviations and confirmations:
   all hard loads, lead with request replay.
 - **Not built (as planned):** IndexedDB in checkpoints, screenshots, a general
   automation engine, GA4 reports.
+
+## 13. Open-source npm package (plan, 2026-09-01)
+
+**Goal.** Nobody should need to clone the repo. `npx browser-command-center` puts
+`bcc.js` on the clipboard and prints the Snippet steps; `npx browser-command-center hub`
+runs the loopback hub; `import { boot } from 'browser-command-center'` lets a developer
+compose their own bundle with a subset of tools or extra ones. The repo carries the
+standard open-source scaffolding and a CI + release pipeline so a published tarball is
+always a tested build.
+
+### 13.1 Findings (state on 2026-09-01)
+
+- Public repo `DanWebDev1980/contextforge`, MIT. `package.json` name is
+  `browser-command-center` — **free on npm** (`bcc` is taken, v1.2.0). Repo name and
+  LICENSE holder still say `contextforge`; everything else says BCC.
+- `package.json` lacks `repository`, `homepage`, `bugs`, `keywords`, `author`, `files`,
+  `bin`, `exports`, `engines`, `publishConfig`. `dist/` is gitignored and nothing builds
+  it on publish.
+- `hub/server.mjs` (`resolve('dist')`), `scripts/copy.mjs`, `scripts/pack.mjs`,
+  `scripts/doctor.mjs` resolve `dist/` and `package.json` **relative to cwd** — fine
+  from a checkout, broken under `npx`.
+- `src/core/net/mock-engine.js:18` contains a raw NUL byte (the `**` placeholder in
+  `patternToRegex`). Git flags the file as binary; diffs and code review on it are blind.
+  Fix: write it as the JS escape sequence (backslash-u-0000). Behaviour unchanged.
+- Tests: 33 unit checks pass locally. The browser suite launches `$CHROME ?? 'chromium'`
+  over CDP; GitHub `ubuntu-latest` runners ship `google-chrome`, so CI sets `CHROME`.
+- No secrets, tokens or employer-identifying strings in `src/`, `hub/`, `scripts/`,
+  `docs/` (only the `billing.corp` placeholder in the env-map example).
+- `npm whoami` → not logged in on this machine. The first publish is a human step.
+
+### 13.2 Package surface
+
+| Piece | Decision |
+| --- | --- |
+| `bin` | `browser-command-center` and `bcc` → `bin/bcc.mjs`. Subcommands: `copy` (default), `hub`, `serve`, `pack`, `doctor`, `path` (prints the absolute path of the bundled `bcc.js`), `--version`. Each is the existing script, with paths resolved from the package root via `import.meta.url`. |
+| Prebuilt bundle | `dist/bcc.js` + `dist/index.html` ship in the tarball. `prepack` runs the build so the tarball can never carry a stale bundle. Also reachable from a CDN as `unpkg.com/browser-command-center/dist/bcc.js`. |
+| ESM exports | `.` → `src/app/main.js` (`boot`, `onBoot`, `VERSION`); `./tools` → `src/tools/index.js` (`TOOLS`); `./tools/*` → one tool each; `./dist/bcc.js`. Marked **experimental** in the README: the build-time `__BCC_VERSION__` define falls back to `'dev'` in a consumer's bundler, and the surface may move before 2.0. |
+| `files` | `bin/`, `dist/bcc.js`, `dist/index.html`, `src/`, `hub/`, `scripts/`, `README.md`, `LICENSE`, `CHANGELOG.md`. Tests, docs and `build.mjs` stay on GitHub. |
+| `engines` | `node >= 20` (top-level await, `node:` imports, esbuild 0.25). |
+| Hub store | Stays `./.bcc-hub` in the **cwd** (project-local captures), `BCC_HUB_DIR` overrides. `dist/` is served from the package. |
+
+### 13.3 Repo hygiene
+
+- Rename the GitHub repo to `browser-command-center` (GitHub redirects the old URL);
+  LICENSE holder → `BrowserCommandCenter contributors`; `.gitignore` legacy entries stay
+  (migration path).
+- Add `CHANGELOG.md` (Keep a Changelog), `SECURITY.md` (private reporting via GitHub
+  advisories; restate the client-side-only threat model), `CODE_OF_CONDUCT.md`
+  (Contributor Covenant 2.1), `.github/ISSUE_TEMPLATE/` (bug, tool request, selector
+  calibration report), `PULL_REQUEST_TEMPLATE.md`, `.editorconfig`.
+- README: install section becomes npx-first (`npx browser-command-center`), the
+  clone path moves under "Developing"; npm + CI badges; a "Use as a library" section.
+- CONTRIBUTING: release procedure (bump, changelog, tag) and the CI expectations.
+
+### 13.4 CI and release
+
+- `.github/workflows/ci.yml` — push + PR: Node 20 and 22, `npm ci`, `npm test`
+  (`CHROME=google-chrome`), `npm pack --dry-run` and assert the tarball lists
+  `dist/bcc.js` and stays under 1 MB.
+- `.github/workflows/release.yml` — on tag `v*`: run the same tests, then
+  `npm publish --provenance --access public` using **npm trusted publishing** (OIDC,
+  `id-token: write`) — no long-lived token in the repo. Trusted publishing is configured
+  on npmjs.com **after** the package exists, so publish 1 is `npm login && npm publish`
+  by hand, publish 2+ is `git tag v1.0.1 && git push --tags`.
+
+### 13.5 Order of work
+
+1. Fix the NUL byte; commit alone (reviewable diff).
+2. `bin/bcc.mjs` + package-root path resolution in hub/scripts; `package.json` metadata.
+3. Hygiene files, README/CONTRIBUTING edits, LICENSE holder.
+4. CI + release workflows; verify `npm pack --dry-run` and `npx ./ path` locally.
+5. Repo rename (`gh repo rename`), push, tag once the user has published 1.0.0.
+
+### 13.6 Decisions taken in this round
+
+| Question | Decision |
+| --- | --- |
+| Package and repo name | `browser-command-center` on npm, **and rename the GitHub repo** to match. One name everywhere; LICENSE holder becomes "BrowserCommandCenter contributors". |
+| What the package delivers | **All three**: the `npx` CLI, the prebuilt bundle in the tarball, and the ESM library exports, the last marked experimental. |
+| First version | **1.0.0**. The paste-and-use contract is covered by 143 checks; the README flags the Figma/Octane adapters and the library exports as the parts that may move. |
+| Publishing identity | The package must **not carry the author's name or personal email**. npm publishes the maintainer email in registry metadata (`npm view <pkg> maintainers` — verified), so the npm account needs a dedicated address the author creates; nothing in the tarball names a person. |
+| Git history | **Rewrite and force-push.** Commit `191fb7a` carried `Daniel Roberts <danbdex@hotmail.com>` on a public repo, which would have made a fresh npm identity pointless — npm provenance links the package straight back to it. |
+
+**Consequences of the identity decision, applied:**
+
+- `author` is `BrowserCommandCenter contributors`, with no email. No `contributors`
+  field, no email anywhere in the tarball.
+- Contact routes through GitHub only: issues, Discussions, and private security
+  advisories. `SECURITY.md` and the Code of Conduct name no individual.
+- All commits, existing and new, are authored `DanWebDev1980
+  <89288096+DanWebDev1980@users.noreply.github.com>` — GitHub's noreply address, so
+  contribution attribution still works without exposing a real address.
+- **Still on the author to do**: create the dedicated address, register the npm user,
+  and run the first `npm publish`. Also worth enabling GitHub → Settings → Emails →
+  *Keep my email addresses private* and *Block command line pushes that expose my
+  email*, so this cannot recur.
