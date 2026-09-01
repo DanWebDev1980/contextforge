@@ -58,5 +58,20 @@ jobs:
 
       - run: npm test
 
+      # 1.0.0 was published by hand (npm cannot attach a trusted publisher to a
+      # package that does not exist yet), and a re-run of any tag should be a
+      # no-op rather than a red build.
+      - name: Is this version already on the registry?
+        id: published
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if npm view "browser-command-center@${version}" version > /dev/null 2>&1; then
+            echo "already=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::browser-command-center@${version} is already published; skipping the publish step"
+          else
+            echo "already=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Publish to npm
+        if: steps.published.outputs.already == 'false'
         run: npm publish --provenance --access public
